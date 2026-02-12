@@ -1,0 +1,39 @@
+# ============================================================================
+# SmartAIAudit — Production Docker Compose (Cloud Supabase)
+# ============================================================================
+# Usage:
+#   docker compose up -d
+#
+# For self-hosted Supabase, add:
+#   docker compose -f docker-compose.yml -f docker-compose.selfhosted.yml --profile supabase up -d
+# ============================================================================
+
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: docker/deploy/Dockerfile.backend
+    ports:
+      - "${PORT:-8080}:8080"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - GUACD_HOST=guacd
+      - GUACD_PORT=4822
+      - GUAC_RECORDING_PATH=/recordings
+    volumes:
+      - recordings:/recordings
+    depends_on:
+      guacd:
+        condition: service_started
+    restart: unless-stopped
+
+  guacd:
+    image: guacamole/guacd:latest
+    volumes:
+      - recordings:/recordings
+    restart: unless-stopped
+
+volumes:
+  recordings:

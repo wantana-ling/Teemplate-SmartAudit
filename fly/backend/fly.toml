@@ -1,0 +1,49 @@
+# ============================================================================
+# SmartAIAudit Backend — Fly.io Configuration
+# ============================================================================
+# Runs Node.js backend + guacd co-located in one machine.
+# Uses cloud Supabase — secrets set via `fly secrets set`.
+# ============================================================================
+
+app = "smartaudit-backend"
+primary_region = "sin"
+
+[build]
+  dockerfile = "../../docker/deploy/Dockerfile.demo-backend"
+
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+  GUACD_HOST = "localhost"
+  GUACD_PORT = "4822"
+  GUAC_RECORDING_PATH = "/recordings"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+[mounts]
+  source = "recordings"
+  destination = "/recordings"
+
+# Secrets to set via `fly secrets set`:
+#   SUPABASE_PROJECT_URL
+#   SUPABASE_PUBLISHABLE_API_KEY
+#   SUPABASE_SECRET_KEY
+#   JWT_SECRET
+#   ENCRYPTION_KEY
+#   OPENROUTER_API_KEY
+#   CORS_ORIGIN=https://smartaudit-backend.fly.dev

@@ -1,0 +1,135 @@
+# ============================================================================
+# SmartAIAudit Demo Backend — Backend + guacd co-located
+# ============================================================================
+# Combines the Node.js backend with guacd in a single container.
+# guacd is compiled from source in a builder stage (same glibc as runtime).
+# supervisord runs both processes.
+# ============================================================================
+
+# ---------------------------------------------------------------------------
+# Stage 0: compile guacd from source on bookworm
+# ---------------------------------------------------------------------------
+FROM debian:bookworm-slim AS guacd-builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+ARG GUAC_VERSION=1.5.5
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        curl \
+        libcairo2-dev \
+        libjpeg62-turbo-dev \
+        libpng-dev \
+        libtool-bin \
+        uuid-dev \
+        freerdp2-dev \
+        libpango1.0-dev \
+        libssh2-1-dev \
+        libvncserver-dev \
+        libtelnet-dev \
+        libwebsockets-dev \
+        libssl-dev \
+        libvorbis-dev \
+        libwebp-dev \
+        libpulse-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL "https://downloads.apache.org/guacamole/${GUAC_VERSION}/source/guacamole-server-${GUAC_VERSION}.tar.gz" \
+        -o /tmp/guacamole-server.tar.gz \
+    && tar -xzf /tmp/guacamole-server.tar.gz -C /tmp \
+    && cd /tmp/guacamole-server-${GUAC_VERSION} \
+    && ./configure --with-init-dir=/etc/init.d --prefix=/usr/local \
+    && make -j"$(nproc)" \
+    && make install \
+    && ldconfig
+
+# ---------------------------------------------------------------------------
+# Stage 1: build shared + backend (same as Dockerfile.backend)
+# ---------------------------------------------------------------------------
+FROM node:20-alpine AS builder
+
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
+COPY packages/shared/package.json packages/shared/
+COPY apps/backend/package.json apps/backend/
+
+RUN pnpm install --frozen-lockfile
+
+COPY packages/shared/ packages/shared/
+COPY apps/backend/ apps/backend/
+
+RUN pnpm --filter @smartaiaudit/shared build && \
+    pnpm --filter @smartaiaudit/backend build
+
+# ---------------------------------------------------------------------------
+# Stage 2: production image — bookworm-slim (matches guacd build)
+# ---------------------------------------------------------------------------
+FROM node:20-bookworm-slim
+
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+# Install supervisord + guacd runtime libraries
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        supervisor \
+        libcairo2 \
+        libjpeg62-turbo \
+        libpng16-16 \
+        libtool-bin \
+        libossp-uuid16 \
+        libfreerdp2-2 \
+        libfreerdp-client2-2 \
+        libwinpr2-2 \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
+        libssh2-1 \
+        libtelnet2 \
+        libvncserver1 \
+        libvncclient1 \
+        libwebsockets17 \
+        libpulse0 \
+        libvorbis0a \
+        libwebp7 \
+        ghostscript \
+        wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy all compiled guacd artifacts from builder
+COPY --from=guacd-builder /usr/local/ /usr/local/
+RUN ldconfig
+
+# -- Node.js app -----------------------------------------------------------
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/shared/package.json packages/shared/
+COPY apps/backend/package.json apps/backend/
+
+# --ignore-scripts skips husky prepare + ffmpeg-static download
+# ffmpeg-static is re-triggered below for video export support
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts \
+    && cd node_modules/ffmpeg-static && node install.js || true
+
+COPY --from=builder /app/packages/shared/dist/ packages/shared/dist/
+COPY --from=builder /app/apps/backend/dist/ apps/backend/dist/
+
+# Risk-detection rules (loaded at runtime)
+# rule-loader resolves process.cwd()+'/rules' = /app/rules/
+COPY apps/backend/rules/ rules/
+
+# Recordings directory
+RUN mkdir -p /recordings && chown node:node /recordings
+
+# Supervisord config
+COPY docker/deploy/supervisord-backend.conf /etc/supervisor/conf.d/smartaudit.conf
+
+ENV NODE_ENV=production
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:8080/health || exit 1
+
+CMD ["supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]

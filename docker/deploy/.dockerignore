@@ -1,0 +1,15 @@
+node_modules
+dist
+out
+.git
+.env
+.env.*
+!.env.example
+*.md
+*.log
+docker/
+docs/
+test-data/
+smartaudit-beta/
+apps/client-desktop/
+apps/auditor-desktop/

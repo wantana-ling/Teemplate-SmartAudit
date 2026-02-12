@@ -1,0 +1,123 @@
+{
+  "version": "1.0.0",
+  "lastModified": "2026-01-30T00:00:00Z",
+  "sequences": [
+    {
+      "id": "SEQ-001",
+      "enabled": true,
+      "name": "Credential Harvesting Chain",
+      "patterns": ["whoami|id\\b", "cat.*passwd|net\\s+user", "cat.*shadow|hashdump"],
+      "risk": "critical",
+      "description": "Sequential enumeration leading to credential access",
+      "mitreTactic": "Credential Access"
+    },
+    {
+      "id": "SEQ-002",
+      "enabled": true,
+      "name": "Privilege Escalation Chain",
+      "patterns": ["sudo\\s+-l|find.*-perm.*4000", "sudo\\s+", "id.*root|whoami.*root"],
+      "risk": "critical",
+      "description": "Privilege check followed by escalation attempt",
+      "mitreTactic": "Privilege Escalation"
+    },
+    {
+      "id": "SEQ-003",
+      "enabled": true,
+      "name": "Reconnaissance to Exfiltration",
+      "patterns": ["ls|find|dir", "tar\\s+|zip\\s+", "scp|curl.*-F|rsync"],
+      "risk": "high",
+      "description": "File enumeration followed by archiving and transfer",
+      "mitreTactic": "Exfiltration"
+    },
+    {
+      "id": "SEQ-004",
+      "enabled": true,
+      "name": "Defense Evasion Chain",
+      "patterns": ["history\\s+-c|rm.*history", "unset\\s+HISTFILE", "rm.*\\.log|shred"],
+      "risk": "high",
+      "description": "Multiple track-covering activities detected",
+      "mitreTactic": "Defense Evasion"
+    },
+    {
+      "id": "SEQ-005",
+      "enabled": true,
+      "name": "Lateral Movement Preparation",
+      "patterns": ["ssh-keygen|cat.*id_rsa", "ssh\\s+\\S+@", "scp.*@.*:"],
+      "risk": "high",
+      "description": "SSH key operations followed by remote access",
+      "mitreTactic": "Lateral Movement"
+    },
+    {
+      "id": "SEQ-006",
+      "enabled": true,
+      "name": "Persistence Installation",
+      "patterns": ["useradd|net\\s+user.*\\/add", "echo.*>>.*authorized_keys|crontab", "systemctl\\s+enable"],
+      "risk": "critical",
+      "description": "User creation followed by persistence mechanism",
+      "mitreTactic": "Persistence"
+    },
+    {
+      "id": "SEQ-007",
+      "enabled": true,
+      "name": "Data Collection Chain",
+      "patterns": ["find.*-name|dir\\s+\\/s", "mysqldump|pg_dump|tar", "base64|gzip"],
+      "risk": "high",
+      "description": "Data discovery, collection, and encoding for exfiltration",
+      "mitreTactic": "Collection"
+    },
+    {
+      "id": "SEQ-008",
+      "enabled": true,
+      "name": "Container Escape Attempt",
+      "patterns": ["cat.*\\/proc\\/1\\/cgroup", "mount.*\\/dev", "nsenter|docker.*--privileged"],
+      "risk": "critical",
+      "description": "Container environment detection followed by escape attempt",
+      "mitreTactic": "Privilege Escalation"
+    },
+    {
+      "id": "SEQ-009",
+      "enabled": true,
+      "name": "Windows LOLBin Attack Chain",
+      "patterns": ["certutil.*-urlcache|bitsadmin.*\\/transfer", "rundll32|regsvr32|mshta", "cmd|powershell.*-e"],
+      "risk": "critical",
+      "description": "LOLBin download followed by execution and post-exploitation",
+      "mitreTactic": "Execution"
+    },
+    {
+      "id": "SEQ-010",
+      "enabled": true,
+      "name": "AMSI Bypass Chain",
+      "patterns": ["amsi|set-mppreference", "powershell.*-enc|iex", "invoke-mimikatz|rubeus"],
+      "risk": "critical",
+      "description": "Security bypass followed by malicious PowerShell execution",
+      "mitreTactic": "Defense Evasion"
+    },
+    {
+      "id": "SEQ-011",
+      "enabled": true,
+      "name": "Linux Rootkit Installation",
+      "patterns": ["insmod|modprobe", "echo.*>>.*pam\\.d|pam_permit", "rm.*\\.log|history\\s+-c"],
+      "risk": "critical",
+      "description": "Kernel module loading with persistence and track covering",
+      "mitreTactic": "Persistence"
+    },
+    {
+      "id": "SEQ-012",
+      "enabled": true,
+      "name": "Windows Registry Persistence Chain",
+      "patterns": ["reg\\s+add.*\\\\run", "schtasks\\s+\\/create", "sc\\s+create"],
+      "risk": "high",
+      "description": "Multiple Windows persistence mechanisms installed",
+      "mitreTactic": "Persistence"
+    },
+    {
+      "id": "SEQ-013",
+      "enabled": true,
+      "name": "Linux SUID Exploitation",
+      "patterns": ["find.*-perm.*4000", "getcap\\s+-r", "\\.\\/.+\\s+"],
+      "risk": "high",
+      "description": "SUID/capability enumeration followed by exploit execution",
+      "mitreTactic": "Privilege Escalation"
+    }
+  ]
+}

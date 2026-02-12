@@ -1,0 +1,36 @@
+# ============================================================================
+# SmartAIAudit Demo Targets — Fly.io Configuration
+# ============================================================================
+# Ubuntu container with SSH (22), VNC (5900), RDP (3389).
+# Private only — reachable from backend via .internal DNS.
+# No [http_service] — these are raw TCP services on the private network.
+# ============================================================================
+
+app = "smartaudit-demo-targets"
+primary_region = "sin"
+
+[build]
+  dockerfile = "../../docker/deploy/Dockerfile.demo-targets"
+
+# SSH — exposed on private network
+[[services]]
+  protocol = "tcp"
+  internal_port = 22
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+# VNC — exposed on private network
+[[services]]
+  protocol = "tcp"
+  internal_port = 5900
+
+# RDP — exposed on private network
+[[services]]
+  protocol = "tcp"
+  internal_port = 3389
+
+[[vm]]
+  memory = "1024mb"
+  cpu_kind = "shared"
+  cpus = 1

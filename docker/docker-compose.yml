@@ -1,0 +1,61 @@
+services:
+  # Guacd - Apache Guacamole proxy daemon
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: smartaiaudit-guacd
+    restart: unless-stopped
+    ports:
+      - "4822:4822"
+    volumes:
+      - ./recordings:/recordings
+    environment:
+      - GUACD_LOG_LEVEL=info
+    networks:
+      - smartaiaudit
+
+  # SSH Test Server
+  ssh-server:
+    build:
+      context: ./test-servers/ssh
+      dockerfile: Dockerfile
+    container_name: smartaiaudit-ssh-server
+    restart: unless-stopped
+    ports:
+      - "2222:22"
+    networks:
+      - smartaiaudit
+
+  # VNC Test Server (Linux GUI)
+  vnc-server:
+    build:
+      context: ./test-servers/linux-gui
+      dockerfile: Dockerfile
+    container_name: smartaiaudit-vnc-server
+    restart: unless-stopped
+    ports:
+      - "5901:5900"
+    environment:
+      - VNC_PASSWORD=testpass
+      - VNC_RESOLUTION=1280x720
+    networks:
+      - smartaiaudit
+
+  # RDP Test Server (Linux with xRDP)
+  rdp-server:
+    build:
+      context: ./test-servers/linux-rdp
+      dockerfile: Dockerfile
+    container_name: smartaiaudit-rdp-server
+    restart: unless-stopped
+    ports:
+      - "3389:3389"
+    networks:
+      - smartaiaudit
+
+networks:
+  smartaiaudit:
+    driver: bridge
+
+volumes:
+  recordings:
+    driver: local

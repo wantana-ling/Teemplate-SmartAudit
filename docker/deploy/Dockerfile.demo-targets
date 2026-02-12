@@ -1,0 +1,73 @@
+# ============================================================================
+# SmartAIAudit Demo Targets — SSH + VNC + xRDP in one container
+# ============================================================================
+# Lightweight Ubuntu with XFCE desktop shared by VNC and RDP.
+# SSH is a plain terminal (no desktop needed).
+# Skips heavy packages (Firefox, etc.) to keep image ~700 MB.
+# ============================================================================
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ── Install everything in one layer ────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        # SSH
+        openssh-server \
+        # Desktop
+        xfce4 \
+        xfce4-terminal \
+        dbus-x11 \
+        # Virtual framebuffer
+        xvfb \
+        # VNC
+        x11vnc \
+        # RDP
+        xrdp \
+        xorgxrdp \
+        # Utilities (useful for demo sessions)
+        sudo \
+        vim \
+        nano \
+        curl \
+        wget \
+        net-tools \
+        iputils-ping \
+        htop \
+        procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Create demo user ──────────────────────────────────────────────────────
+RUN useradd -m -s /bin/bash testuser \
+    && echo 'testuser:testpass' | chpasswd \
+    && usermod -aG sudo testuser \
+    && echo 'testuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# ── Configure SSH ─────────────────────────────────────────────────────────
+RUN mkdir -p /run/sshd \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# ── Configure xRDP to use XFCE ───────────────────────────────────────────
+RUN sed -i 's/max_bpp=32/max_bpp=24/' /etc/xrdp/xrdp.ini \
+    && echo "xfce4-session" > /home/testuser/.xsession \
+    && chown testuser:testuser /home/testuser/.xsession
+
+# Fix xRDP startwm
+RUN printf '#!/bin/bash\nunset DBUS_SESSION_BUS_ADDRESS\nunset XDG_RUNTIME_DIR\nexec startxfce4\n' \
+        > /etc/xrdp/startwm.sh \
+    && chmod +x /etc/xrdp/startwm.sh
+
+# ── Create test files so the desktop isn't empty ──────────────────────────
+RUN mkdir -p /home/testuser/Desktop /home/testuser/Documents \
+    && echo "Welcome to SmartAudit Demo Server" > /home/testuser/Desktop/welcome.txt \
+    && echo "This is a test document for the demo." > /home/testuser/Documents/test.txt \
+    && chown -R testuser:testuser /home/testuser
+
+# ── Entrypoint ────────────────────────────────────────────────────────────
+COPY docker/deploy/start-desktop.sh /start-desktop.sh
+RUN chmod +x /start-desktop.sh
+
+EXPOSE 22 5900 3389
+
+CMD ["/start-desktop.sh"]

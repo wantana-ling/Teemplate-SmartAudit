@@ -1,0 +1,24 @@
+# Root docker-compose.yml
+# For the full test infrastructure, use: cd docker && docker compose up -d
+#
+# This file provides a minimal setup for quick development with just guacd.
+# For SSH, VNC, and RDP test servers, use the docker/docker-compose.yml instead.
+
+services:
+  # Guacd - Apache Guacamole proxy daemon
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: smartaiaudit-guacd
+    restart: unless-stopped
+    ports:
+      - "4822:4822"
+    volumes:
+      - ./docker/recordings:/recordings
+    environment:
+      - GUACD_LOG_LEVEL=info
+    networks:
+      - smartaiaudit
+
+networks:
+  smartaiaudit:
+    driver: bridge

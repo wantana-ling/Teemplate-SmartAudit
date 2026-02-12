@@ -1,0 +1,230 @@
+# ============================================================================
+# Environment Variables
+# ============================================================================
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+
+# ============================================================================
+# Dependencies
+# ============================================================================
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+
+# Python virtual environments (from POC)
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# ============================================================================
+# Build Outputs
+# ============================================================================
+dist/
+build/
+out/
+*.tsbuildinfo
+.turbo/
+
+# Electron build artifacts
+apps/client-desktop/dist/
+apps/client-desktop/release/
+apps/client-desktop/out/
+apps/auditor-desktop/dist/
+apps/auditor-desktop/release/
+apps/auditor-desktop/out/
+*.dmg
+*.exe
+*.AppImage
+*.deb
+*.rpm
+*.zip
+*.tar.gz
+
+# ============================================================================
+# Logs
+# ============================================================================
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ============================================================================
+# Testing
+# ============================================================================
+coverage/
+*.lcov
+.nyc_output/
+junit.xml
+
+# ============================================================================
+# Temporary Files
+# ============================================================================
+*.tmp
+*.temp
+.cache/
+tmp/
+temp/
+
+# Guacamole recordings (local dev)
+recordings/
+*.guac
+
+# Video exports (temporary)
+/tmp/video-*.mp4
+/tmp/session-*.webm
+
+# ============================================================================
+# OS Files
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================================================
+# IDE / Editor
+# ============================================================================
+# VSCode
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# ============================================================================
+# Electron Specific
+# ============================================================================
+# electron-builder output
+dist_electron/
+
+# Electron crash reports
+crash-reports/
+
+# ============================================================================
+# Docker
+# ============================================================================
+# Don't ignore docker-compose.yml, but ignore overrides
+docker-compose.override.yml
+
+# ============================================================================
+# Database
+# ============================================================================
+# Local database files (if any)
+*.db
+*.sqlite
+*.sqlite3
+
+# Supabase local (if using local development)
+.supabase/
+supabase/.branches/
+supabase/.temp/
+
+# ============================================================================
+# Project Specific
+# ============================================================================
+# POC folder (old implementation)
+smartaudit-beta/
+
+# Local configuration
+.local/
+
+# Diagnostic files
+diagnostic-*.sql
+
+# ============================================================================
+# Package Manager
+# ============================================================================
+# pnpm
+.pnpm-store/
+.pnpm-debug.log
+
+# npm
+package-lock.json
+npm-debug.log*
+
+# yarn
+yarn.lock
+yarn-debug.log*
+yarn-error.log*
+.yarn/
+.yarn-integrity
+
+# ============================================================================
+# TypeScript
+# ============================================================================
+*.tsbuildinfo
+
+# ============================================================================
+# Misc
+# ============================================================================
+# Certificate files (if any)
+*.pem
+*.key
+*.crt
+*.p12
+
+# Backup files
+*.bak
+*.backup
+
+# Lock files (keep pnpm-lock.yaml for reproducibility)
+# package-lock.json already ignored above
+
+# ============================================================================
+# Deploy Cleanup
+# ============================================================================
+supabase_api_key_changelog.html
+test-data/
+scripts/export-components.js
+scripts/generate-diagram.js
+scripts/generate_diagram.py
+dist-electron/
