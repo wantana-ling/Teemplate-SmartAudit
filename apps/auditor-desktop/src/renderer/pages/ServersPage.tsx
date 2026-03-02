@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useServerStore, Server } from '../stores/serverStore';
 import { api } from '../services/api';
@@ -42,7 +42,9 @@ export default function ServersPage() {
     username: '',
     password: '',
     description: '',
+    department: [] as string[],
   });
+  const [departments, setDepartments] = useState<string[]>([]);
 
   // Access management state
   const [showAccessModal, setShowAccessModal] = useState<Server | null>(null);
@@ -54,6 +56,24 @@ export default function ServersPage() {
   const [showAddUserDropdown, setShowAddUserDropdown] = useState(false);
   const [showAddGroupDropdown, setShowAddGroupDropdown] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+
+  // Fetch departments from groups for the dropdown
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        const res = await api.getGroups();
+        if (res.success && Array.isArray(res.data)) {
+          const names = (res.data as any[])
+            .map((g: any) => g.name)
+            .filter(Boolean);
+          setDepartments(Array.from(new Set(names)).sort());
+        }
+      } catch (err) {
+        console.error('Failed to load departments:', err);
+      }
+    };
+    loadDepartments();
+  }, []);
 
   // Initial fetch on mount - use URL params if present
   useEffect(() => {
@@ -149,7 +169,10 @@ export default function ServersPage() {
     }
   };
 
+  const deptRef = useRef<string[]>([]);
+
   const openAccessModal = (server: Server) => {
+    deptRef.current = Array.isArray(server.department) ? [...server.department] : [];
     setShowAccessModal(server);
     setAccessError(null);
     loadServerAccess(server.id);
@@ -177,6 +200,7 @@ export default function ServersPage() {
       username: '',
       password: '',
       description: '',
+      department: [],
     });
   };
 
@@ -190,6 +214,7 @@ export default function ServersPage() {
       username: server.username || '',
       password: '',
       description: server.description || '',
+      department: server.department || [],
     });
     setShowModal(true);
   };
@@ -332,6 +357,17 @@ export default function ServersPage() {
                   </span>
                 </div>
 
+                {server.department && server.department.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1">
+                    {server.department.map((dept) => (
+                      <span key={dept} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-violet-900/40 text-violet-400 border border-violet-700/50 rounded">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                        {dept}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 {server.description && (
                   <p className="text-sm text-slate-400 mb-3 line-clamp-2">{server.description}</p>
                 )}
@@ -457,27 +493,55 @@ export default function ServersPage() {
                   <option value="vnc">VNC</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Username</label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  placeholder="admin"
-                  className="w-full px-4 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-slate-500"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Username (optional)</label>
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder="e.g. Administrator"
+                    autoComplete="off"
+                    className="w-full px-4 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-slate-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">{editingServer ? 'Password (leave blank to keep)' : 'Password (optional)'}</label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    className="w-full px-4 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-slate-500"
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Password {editingServer && '(leave blank to keep current)'}
-                </label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-slate-500"
-                />
+                <label className="block text-sm font-medium text-slate-300 mb-2">Department (optional)</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto px-4 py-3 border border-slate-600 bg-slate-700 rounded-lg">
+                  {departments.length === 0 ? (
+                    <p className="text-sm text-slate-500">No departments available. Create departments first.</p>
+                  ) : (
+                    departments.map((dept) => (
+                      <label key={dept} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.department.includes(dept)}
+                          onChange={(e) => {
+                            const updated = e.target.checked
+                              ? [...formData.department, dept]
+                              : formData.department.filter((d) => d !== dept);
+                            setFormData({ ...formData, department: updated });
+                          }}
+                          className="rounded border-slate-500 bg-slate-600 text-primary-600 focus:ring-primary-500 focus:ring-offset-0"
+                        />
+                        <span className="text-sm text-slate-200">{dept}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Users with the same department will automatically have access</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1">Description</label>
@@ -538,104 +602,40 @@ export default function ServersPage() {
               </div>
             )}
 
-            {/* Add User Access */}
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-slate-300 mb-2">Grant User Access</h3>
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setShowAddUserDropdown(!showAddUserDropdown);
-                    setShowAddGroupDropdown(false);
-                  }}
-                  className="w-full px-4 py-2 border border-dashed border-slate-600 rounded-lg text-slate-400 hover:border-primary-500 hover:text-primary-400 flex items-center justify-center gap-2 transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
-                  Add User
-                </button>
-
-                {showAddUserDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-slate-700 border border-slate-600 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                    {allUsers.filter(u => !serverAccess.some(a => a.user_id === u.id)).length === 0 ? (
-                      <div className="p-4 text-center text-slate-500 text-sm">
-                        No users available to add
-                      </div>
-                    ) : (
-                      allUsers
-                        .filter(u => !serverAccess.some(a => a.user_id === u.id))
-                        .map((user) => (
-                          <button
-                            key={user.id}
-                            onClick={() => handleGrantUserAccess(showAccessModal.id, user.id)}
-                            className="w-full flex items-center gap-3 p-3 hover:bg-slate-600 text-left"
-                          >
-                            <div
-                              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
-                              style={{ backgroundColor: user.avatar_color }}
-                            >
-                              {user.display_name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-100">{user.display_name}</p>
-                              <p className="text-xs text-slate-400">@{user.username}</p>
-                            </div>
-                          </button>
-                        ))
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Add Group Access */}
+            {/* Add Department Access */}
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-slate-300 mb-2">Grant Group Access</h3>
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setShowAddGroupDropdown(!showAddGroupDropdown);
-                    setShowAddUserDropdown(false);
-                  }}
-                  className="w-full px-4 py-2 border border-dashed border-slate-600 rounded-lg text-slate-400 hover:border-primary-500 hover:text-primary-400 flex items-center justify-center gap-2 transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                  Add Group
-                </button>
-
-                {showAddGroupDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-slate-700 border border-slate-600 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                    {allGroups.filter(g => !serverAccess.some(a => a.group_id === g.id)).length === 0 ? (
-                      <div className="p-4 text-center text-slate-500 text-sm">
-                        No groups available to add
-                      </div>
-                    ) : (
-                      allGroups
-                        .filter(g => !serverAccess.some(a => a.group_id === g.id))
-                        .map((group) => (
-                          <button
-                            key={group.id}
-                            onClick={() => handleGrantGroupAccess(showAccessModal.id, group.id)}
-                            className="w-full flex items-center gap-3 p-3 hover:bg-slate-600 text-left"
-                          >
-                            <div
-                              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
-                              style={{ backgroundColor: group.color }}
-                            >
-                              {group.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="font-medium text-slate-100">{group.name}</p>
-                              <p className="text-xs text-slate-400">{group.member_count} members</p>
-                            </div>
-                          </button>
-                        ))
-                    )}
-                  </div>
+              <h3 className="text-sm font-medium text-slate-300 mb-2">Add Department</h3>
+              <div className="space-y-2 max-h-40 overflow-y-auto px-4 py-3 border border-slate-600 bg-slate-700/50 rounded-lg">
+                {departments.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center">No departments available. Create departments first.</p>
+                ) : (
+                  departments.map((dept) => {
+                    const isChecked = deptRef.current.includes(dept);
+                    return (
+                      <label key={dept} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={async (e) => {
+                            const current = [...deptRef.current];
+                            const updated = e.target.checked
+                              ? [...current, dept]
+                              : current.filter((d: string) => d !== dept);
+                            deptRef.current = updated;
+                            await updateServer(showAccessModal.id, { department: updated });
+                            setShowAccessModal({ ...showAccessModal, department: updated });
+                            // Reload access list since backend syncs group access
+                            loadServerAccess(showAccessModal.id);
+                          }}
+                          className="rounded border-slate-500 bg-slate-600 text-primary-600 focus:ring-primary-500 focus:ring-offset-0"
+                        />
+                        <span className="text-sm text-slate-200">{dept}</span>
+                      </label>
+                    );
+                  })
                 )}
               </div>
+              <p className="text-xs text-slate-500 mt-1">Users with matching department will automatically have access</p>
             </div>
 
             {/* Current Access List */}
@@ -651,7 +651,7 @@ export default function ServersPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                   <p>No access granted yet</p>
-                  <p className="text-xs mt-1">Add users or groups above</p>
+                  <p className="text-xs mt-1">Select departments above to grant access</p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -689,15 +689,6 @@ export default function ServersPage() {
                           </>
                         ) : null}
                       </div>
-                      <button
-                        onClick={() => handleRevokeAccess(showAccessModal.id, access.id)}
-                        className="text-slate-500 hover:text-red-400"
-                        title="Revoke access"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
                     </div>
                   ))}
                 </div>

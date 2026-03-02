@@ -12,6 +12,7 @@ export interface User {
   display_name: string;
   email: string | null;
   role: 'super_admin' | 'admin' | 'auditor' | 'client';
+  department: string | null;
   enabled: boolean;
   avatar_color: string;
   created_at: string;
@@ -102,7 +103,7 @@ class AuthService {
         role: 'super_admin',
         enabled: true,
       })
-      .select('id, username, display_name, email, role, enabled, avatar_color, created_at')
+      .select('id, username, display_name, email, role, department, enabled, avatar_color, created_at')
       .single();
 
     if (error) {
@@ -120,21 +121,25 @@ class AuthService {
     password: string,
     displayName: string,
     role: 'admin' | 'auditor' | 'client',
-    createdBy: string
+    createdBy: string,
+    department?: string
   ): Promise<User> {
     const passwordHash = this.hashPassword(password);
 
+    const insertData: any = {
+      username,
+      password_hash: passwordHash,
+      display_name: displayName,
+      role,
+      enabled: true,
+      created_by: createdBy,
+    };
+    if (department) insertData.department = department;
+
     const { data: user, error } = await supabase
       .from('users')
-      .insert({
-        username,
-        password_hash: passwordHash,
-        display_name: displayName,
-        role,
-        enabled: true,
-        created_by: createdBy,
-      })
-      .select('id, username, display_name, email, role, enabled, avatar_color, created_at')
+      .insert(insertData)
+      .select('id, username, display_name, email, role, department, enabled, avatar_color, created_at')
       .single();
 
     if (error) {
@@ -189,7 +194,7 @@ class AuthService {
   async getUserById(userId: string): Promise<User | null> {
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, username, display_name, email, role, enabled, avatar_color, created_at')
+      .select('id, username, display_name, email, role, department, enabled, avatar_color, created_at')
       .eq('id', userId)
       .single();
 
@@ -206,7 +211,7 @@ class AuthService {
   async getUsers(filters?: { role?: string; search?: string }): Promise<User[]> {
     let query = supabase
       .from('users')
-      .select('id, username, display_name, email, role, enabled, avatar_color, created_at, last_login_at')
+      .select('id, username, display_name, email, role, department, enabled, avatar_color, created_at, last_login_at')
       .order('created_at', { ascending: false });
 
     if (filters?.role) {
@@ -231,13 +236,15 @@ class AuthService {
    */
   async updateUser(
     userId: string,
-    updates: Partial<{ display_name: string; email: string; role: string; enabled: boolean; password: string }>
+    updates: Partial<{ username: string; display_name: string; email: string; role: string; department: string; enabled: boolean; password: string }>
   ): Promise<User> {
     const updateData: any = {};
 
+    if (updates.username) updateData.username = updates.username;
     if (updates.display_name) updateData.display_name = updates.display_name;
     if (updates.email !== undefined) updateData.email = updates.email;
     if (updates.role) updateData.role = updates.role;
+    if (updates.department !== undefined) updateData.department = updates.department;
     if (updates.enabled !== undefined) updateData.enabled = updates.enabled;
     if (updates.password) updateData.password_hash = this.hashPassword(updates.password);
 
@@ -247,7 +254,7 @@ class AuthService {
       .from('users')
       .update(updateData)
       .eq('id', userId)
-      .select('id, username, display_name, email, role, enabled, avatar_color, created_at')
+      .select('id, username, display_name, email, role, department, enabled, avatar_color, created_at')
       .single();
 
     if (error) {

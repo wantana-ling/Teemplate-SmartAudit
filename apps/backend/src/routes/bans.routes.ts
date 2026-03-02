@@ -59,6 +59,14 @@ router.post('/', authMiddleware, requireRole(['super_admin', 'admin', 'auditor']
       });
     }
 
+    // Auditor can only ban client users
+    if (req.user?.role === 'auditor' && targetUser?.role !== 'client') {
+      return res.status(403).json({
+        success: false,
+        error: 'Auditors can only ban client users',
+      });
+    }
+
     const result = await banService.banUser({
       userId,
       bannedBy: req.user!.userId,
@@ -283,6 +291,14 @@ router.post('/freeze', authMiddleware, requireRole(['super_admin', 'admin', 'aud
       return res.status(403).json({
         success: false,
         error: 'Cannot freeze a super admin user',
+      });
+    }
+
+    // Auditor can only freeze client users
+    if (req.user?.role === 'auditor' && targetUser?.role !== 'client') {
+      return res.status(403).json({
+        success: false,
+        error: 'Auditors can only freeze client users',
       });
     }
 

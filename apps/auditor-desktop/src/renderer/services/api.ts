@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+const API_DEFAULT_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+const API_BASE_URL = localStorage.getItem('api_server_url') || API_DEFAULT_URL;
 
 interface ApiResponse<T> {
   success: boolean;
@@ -21,6 +22,19 @@ class ApiService {
 
   setToken(token: string | null) {
     this.token = token;
+  }
+
+  setBaseUrl(url: string) {
+    this.baseUrl = url;
+    localStorage.setItem('api_server_url', url);
+  }
+
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  getDefaultUrl(): string {
+    return API_DEFAULT_URL;
   }
 
   private async request<T>(
@@ -141,6 +155,7 @@ class ApiService {
     username?: string;
     password?: string;
     description?: string;
+    department?: string[];
   }) {
     return this.request('/api/admin/servers', {
       method: 'POST',
@@ -156,6 +171,7 @@ class ApiService {
     username: string;
     password: string;
     description: string;
+    department: string[];
     enabled: boolean;
   }>) {
     return this.request(`/api/admin/servers/${id}`, {

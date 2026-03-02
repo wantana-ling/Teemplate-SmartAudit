@@ -85,7 +85,7 @@ export default function GroupsPage() {
       if (response.success) {
         setGroups(response.data);
       } else {
-        setError(response.error || 'Failed to load groups');
+        setError(response.error || 'Failed to load departments');
       }
     } catch (err: any) {
       setError(err.message);
@@ -206,7 +206,7 @@ export default function GroupsPage() {
         setNewGroup({ name: '', description: '', color: '#6B7280' });
         loadGroups();
       } else {
-        setError(response.error || 'Failed to create group');
+        setError(response.error || 'Failed to create department');
       }
     } catch (err: any) {
       setError(err.message);
@@ -214,14 +214,14 @@ export default function GroupsPage() {
   };
 
   const handleDeleteGroup = async (groupId: string) => {
-    if (!confirm('Are you sure you want to delete this group?')) return;
+    if (!confirm('Are you sure you want to delete this department?')) return;
 
     try {
       const response = await api.delete(`/api/groups/${groupId}`);
       if (response.success) {
         loadGroups();
       } else {
-        setError(response.error || 'Failed to delete group');
+        setError(response.error || 'Failed to delete department');
       }
     } catch (err: any) {
       setError(err.message);
@@ -258,9 +258,9 @@ export default function GroupsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <p className="text-slate-400">Manage user groups for server access control</p>
+          <p className="text-slate-400">Manage user departments for server access control</p>
           <span className="px-2 py-0.5 text-xs font-medium bg-slate-700 text-slate-300 rounded-full">
-            {search ? `${filteredGroups.length} of ${groups.length}` : groups.length} groups
+            {search ? `${filteredGroups.length} of ${groups.length}` : groups.length} departments
           </span>
         </div>
         <button
@@ -270,7 +270,7 @@ export default function GroupsPage() {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Create Group
+          Create Department
         </button>
       </div>
 
@@ -279,7 +279,7 @@ export default function GroupsPage() {
         <div className="relative">
           <input
             type="text"
-            placeholder="Search groups by name or description"
+            placeholder="Search departments by name or description"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder-slate-500"
@@ -318,7 +318,7 @@ export default function GroupsPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-slate-100">{group.name}</h3>
-                    <p className="text-xs text-slate-500 font-mono">Access group</p>
+                    <p className="text-xs text-slate-500 font-mono">Department</p>
                   </div>
                 </div>
                 <span
@@ -329,7 +329,7 @@ export default function GroupsPage() {
                     borderColor: `${group.color}50`
                   }}
                 >
-                  GROUP
+                  DEPT
                 </span>
               </div>
 
@@ -374,7 +374,7 @@ export default function GroupsPage() {
                   <button
                     onClick={() => handleDeleteGroup(group.id)}
                     className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors"
-                    title="Delete group"
+                    title="Delete department"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -395,10 +395,10 @@ export default function GroupsPage() {
                 )}
               </svg>
               <h3 className="text-base font-medium text-slate-300">
-                {search ? 'No groups found' : 'No groups yet'}
+                {search ? 'No departments found' : 'No departments yet'}
               </h3>
               <p className="text-slate-500 text-sm mt-1">
-                {search ? `No groups match "${search}"` : 'Create your first group to organize users'}
+                {search ? `No departments match "${search}"` : 'Create your first department to organize users'}
               </p>
             </div>
           )}
@@ -409,11 +409,11 @@ export default function GroupsPage() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6 border border-slate-700">
-            <h2 className="text-xl font-semibold text-slate-100 mb-4">Create Group</h2>
+            <h2 className="text-xl font-semibold text-slate-100 mb-4">Create Department</h2>
             <form onSubmit={handleCreateGroup} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1">
-                  Group Name
+                  Department Name
                 </label>
                 <input
                   type="text"
@@ -421,7 +421,7 @@ export default function GroupsPage() {
                   onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
                   required
                   className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-700 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="e.g., Development Team"
+                  placeholder="e.g., IT, Finance, HR"
                 />
               </div>
 
@@ -434,7 +434,7 @@ export default function GroupsPage() {
                   onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-700 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                   rows={2}
-                  placeholder="Brief description of the group"
+                  placeholder="Brief description of the department"
                 />
               </div>
 
@@ -469,7 +469,7 @@ export default function GroupsPage() {
                   type="submit"
                   className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                 >
-                  Create Group
+                  Create Department
                 </button>
               </div>
             </form>
@@ -608,7 +608,7 @@ export default function GroupsPage() {
                   </div>
                 ) : members.length === 0 ? (
                   <div className="py-8 text-center text-slate-400">
-                    No members in this group yet
+                    No members in this department yet
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -632,7 +632,7 @@ export default function GroupsPage() {
                         <button
                           onClick={() => handleRemoveMember(showMembersModal.id, member.user.id)}
                           className="text-slate-400 hover:text-red-400"
-                          title="Remove from group"
+                          title="Remove from department"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -717,7 +717,7 @@ export default function GroupsPage() {
                     <svg className="w-10 h-10 mx-auto mb-2 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
                     </svg>
-                    No servers assigned to this group
+                    No servers assigned to this department
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -748,7 +748,7 @@ export default function GroupsPage() {
                         <button
                           onClick={() => handleRemoveServer(showMembersModal.id, gs.server_id)}
                           className="text-slate-400 hover:text-red-400"
-                          title="Remove server from group"
+                          title="Remove server from department"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -26,6 +26,7 @@ CREATE TABLE users (
   email TEXT UNIQUE,
   email_verified BOOLEAN DEFAULT false,
   role TEXT NOT NULL CHECK (role IN ('super_admin', 'admin', 'auditor', 'client')),
+  department TEXT,
   enabled BOOLEAN DEFAULT true,
   avatar_color TEXT DEFAULT '#3B82F6',
   last_login_at TIMESTAMPTZ,
@@ -138,6 +139,7 @@ CREATE TABLE session_tokens (
 -- ============================================================================
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_department ON users(department);
 CREATE INDEX idx_users_enabled ON users(enabled);
 CREATE INDEX idx_user_groups_user ON user_groups(user_id);
 CREATE INDEX idx_user_groups_group ON user_groups(group_id);
@@ -193,6 +195,17 @@ END $$;
 CREATE OR REPLACE FUNCTION user_has_server_access(p_user_id UUID, p_server_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
+  -- Check department-based access (server.department is TEXT[])
+  IF EXISTS (
+    SELECT 1 FROM users u
+    JOIN servers s ON s.id = p_server_id
+    WHERE u.id = p_user_id
+      AND u.department IS NOT NULL
+      AND u.department = ANY(s.department)
+  ) THEN
+    RETURN true;
+  END IF;
+
   -- Check direct user access
   IF EXISTS (
     SELECT 1 FROM server_access

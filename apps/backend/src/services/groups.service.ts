@@ -40,9 +40,9 @@ class GroupsService {
       groups.map(async (group) => {
         const [memberResult, serverResult] = await Promise.all([
           supabase
-            .from('user_groups')
+            .from('users')
             .select('*', { count: 'exact', head: true })
-            .eq('group_id', group.id),
+            .eq('department', group.name),
           supabase
             .from('server_access')
             .select('*', { count: 'exact', head: true })

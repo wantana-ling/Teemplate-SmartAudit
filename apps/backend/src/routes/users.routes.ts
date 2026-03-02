@@ -61,7 +61,7 @@ router.get('/:id', requireRole(['super_admin', 'admin', 'auditor']), async (req:
  */
 router.post('/', requireRole(['super_admin', 'admin']), async (req: Request, res: Response) => {
   try {
-    const { username, password, displayName, role } = req.body;
+    const { username, password, displayName, role, department } = req.body;
     const currentUser = (req as any).user;
 
     if (!username || !password || !displayName || !role) {
@@ -114,7 +114,8 @@ router.post('/', requireRole(['super_admin', 'admin']), async (req: Request, res
       password,
       displayName,
       role as 'admin' | 'auditor' | 'client',
-      currentUser.userId
+      currentUser.userId,
+      department
     );
 
     res.status(201).json({
@@ -132,11 +133,10 @@ router.post('/', requireRole(['super_admin', 'admin']), async (req: Request, res
 
 /**
  * Update user
- * Note: Role cannot be changed after user creation
  */
 router.put('/:id', requireRole(['super_admin', 'admin']), async (req: Request, res: Response) => {
   try {
-    const { displayName, email, enabled, password } = req.body;
+    const { username, displayName, email, enabled, password, department, role } = req.body;
     const currentUser = (req as any).user;
     const targetUserId = req.params.id;
 
@@ -157,11 +157,22 @@ router.put('/:id', requireRole(['super_admin', 'admin']), async (req: Request, r
       });
     }
 
+    // Prevent changing role to super_admin
+    if (role && role === 'super_admin' && currentUser.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Insufficient permissions',
+      });
+    }
+
     const updates: any = {};
+    if (username !== undefined) updates.username = username;
     if (displayName !== undefined) updates.display_name = displayName;
     if (email !== undefined) updates.email = email;
+    if (department !== undefined) updates.department = department;
     if (enabled !== undefined) updates.enabled = enabled;
     if (password !== undefined) updates.password = password;
+    if (role !== undefined) updates.role = role;
 
     const user = await authService.updateUser(targetUserId, updates);
 

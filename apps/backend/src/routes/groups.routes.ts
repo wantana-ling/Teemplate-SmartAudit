@@ -13,7 +13,7 @@ router.use(authMiddleware);
 /**
  * Get all groups
  */
-router.get('/', requireRole(['super_admin', 'admin']), async (req: Request, res: Response) => {
+router.get('/', requireRole(['super_admin', 'admin', 'auditor']), async (req: Request, res: Response) => {
   try {
     const groups = await groupsService.getGroups();
 
@@ -32,7 +32,7 @@ router.get('/', requireRole(['super_admin', 'admin']), async (req: Request, res:
 /**
  * Get single group by ID
  */
-router.get('/:id', requireRole(['super_admin', 'admin']), async (req: Request, res: Response) => {
+router.get('/:id', requireRole(['super_admin', 'admin', 'auditor']), async (req: Request, res: Response) => {
   try {
     const group = await groupsService.getGroupById(req.params.id);
 
@@ -331,6 +331,13 @@ router.post('/:id/servers', requireRole(['super_admin', 'admin']), async (req: R
 
     await serverAccessService.grantGroupAccess(serverId, groupId, currentUser.userId);
 
+    // Sync: add group name to servers.department array
+    const { data: server } = await supabase.from('servers').select('department').eq('id', serverId).single();
+    const currentDepts: string[] = Array.isArray(server?.department) ? server.department : [];
+    if (!currentDepts.includes(existingGroup.name)) {
+      await supabase.from('servers').update({ department: [...currentDepts, existingGroup.name] }).eq('id', serverId);
+    }
+
     res.json({
       success: true,
       message: 'Server added to group successfully',
@@ -359,6 +366,12 @@ router.delete('/:id/servers/:serverId', requireRole(['super_admin', 'admin']), a
     }
 
     await serverAccessService.revokeGroupAccess(serverId, groupId);
+
+    // Sync: remove group name from servers.department array
+    const { data: server } = await supabase.from('servers').select('department').eq('id', serverId).single();
+    const currentDepts: string[] = Array.isArray(server?.department) ? server.department : [];
+    const updatedDepts = currentDepts.filter((d: string) => d !== existingGroup.name);
+    await supabase.from('servers').update({ department: updatedDepts }).eq('id', serverId);
 
     res.json({
       success: true,

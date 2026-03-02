@@ -33,6 +33,7 @@ export default function UsersPage() {
   const { user: currentUser } = useAuthStore();
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [roleFilter, setRoleFilter] = useState('');
+  const [departments, setDepartments] = useState<string[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState<User | null>(null);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState<User | null>(null);
@@ -45,12 +46,15 @@ export default function UsersPage() {
     confirmPassword: '',
     displayName: '',
     role: 'client' as 'admin' | 'auditor' | 'client',
+    department: '',
   });
 
   // Edit form state
   const [editForm, setEditForm] = useState({
+    username: '',
     displayName: '',
-    email: '',
+    role: '' as string,
+    password: '',
   });
 
   // Reset password form
@@ -72,6 +76,25 @@ export default function UsersPage() {
   const [banReason, setBanReason] = useState('');
   const [banSubmitting, setBanSubmitting] = useState(false);
 
+  // Load departments from groups (Departments page)
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        const res = await api.getGroups();
+        if (res.success && Array.isArray(res.data)) {
+          const names = (res.data as any[])
+            .map((g: any) => g.name)
+            .filter(Boolean);
+          setDepartments(Array.from(new Set(names)).sort());
+        }
+      } catch (err) {
+        console.error('Failed to load departments:', err);
+      }
+    };
+
+    loadDepartments();
+  }, []);
+
   // Initial fetch on mount - use URL params if present
   useEffect(() => {
     const initialSearch = searchParams.get('search') || '';
@@ -79,18 +102,20 @@ export default function UsersPage() {
     setTimeout(() => setInitialLoadDone(true), 350);
   }, []);
 
-  // Check ban status for all users
+  // Check ban status for all users (parallel for performance)
   useEffect(() => {
     const checkBanStatus = async () => {
+      const results = await Promise.allSettled(
+        users.map(user =>
+          api.get<{ banned: boolean }>(`/api/bans/check/${user.id}`)
+            .then(res => ({ id: user.id, banned: res.success ? (res.data?.banned || false) : false }))
+            .catch(() => ({ id: user.id, banned: false }))
+        )
+      );
       const statusMap = new Map<string, boolean>();
-      for (const user of users) {
-        try {
-          const response = await api.get<{ banned: boolean }>(`/api/bans/check/${user.id}`);
-          if (response.success) {
-            statusMap.set(user.id, response.data?.banned || false);
-          }
-        } catch {
-          // Ignore errors
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          statusMap.set(result.value.id, result.value.banned);
         }
       }
       setUserBanStatus(statusMap);
@@ -135,11 +160,12 @@ export default function UsersPage() {
       password: createForm.password,
       displayName: createForm.displayName,
       role: createForm.role,
+      department: createForm.department || undefined,
     });
 
     if (success) {
       setShowCreateModal(false);
-      setCreateForm({ username: '', password: '', confirmPassword: '', displayName: '', role: 'client' });
+      setCreateForm({ username: '', password: '', confirmPassword: '', displayName: '', role: 'client', department: '' });
     }
   };
 
@@ -147,10 +173,16 @@ export default function UsersPage() {
     e.preventDefault();
     if (!showEditModal) return;
 
-    const success = await updateUser(showEditModal.id, {
+    const updates: any = {
+      username: editForm.username,
       displayName: editForm.displayName,
-      email: editForm.email || undefined,
-    });
+      role: editForm.role,
+    };
+    if (editForm.password) {
+      updates.password = editForm.password;
+    }
+
+    const success = await updateUser(showEditModal.id, updates);
 
     if (success) {
       setShowEditModal(null);
@@ -182,14 +214,22 @@ export default function UsersPage() {
 
   const openEditModal = (user: User) => {
     setEditForm({
+      username: user.username,
       displayName: user.display_name,
-      email: user.email || '',
+      role: user.role,
+      password: '',
     });
     setShowEditModal(user);
   };
 
   // Determine available roles based on current user's role
   const availableRoles = currentUser?.role === 'super_admin'
+    ? ['admin', 'auditor', 'client']
+    : ['auditor', 'client'];
+
+  const availableEditRoles = currentUser?.role === 'super_admin'
+    ? ['admin', 'auditor', 'client']
+    : currentUser?.role === 'admin'
     ? ['admin', 'auditor', 'client']
     : ['auditor', 'client'];
 
@@ -338,8 +378,8 @@ export default function UsersPage() {
           className="px-4 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <option value="">All Roles</option>
-          <option value="super_admin">Super Admin</option>
-          <option value="admin">Admin</option>
+          {currentUser?.role === 'super_admin' && <option value="super_admin">Super Admin</option>}
+          {currentUser?.role !== 'auditor' && <option value="admin">Admin</option>}
           <option value="auditor">Auditor</option>
           <option value="client">Client</option>
         </select>
@@ -358,6 +398,7 @@ export default function UsersPage() {
           <thead className="bg-slate-900 border-b border-slate-700">
             <tr>
               <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">User</th>
+              <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Department</th>
               <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Role</th>
               <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Last Login</th>
               <th className="text-left px-6 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Created</th>
@@ -367,18 +408,22 @@ export default function UsersPage() {
           <tbody className="divide-y divide-slate-700">
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center">
+                <td colSpan={6} className="px-6 py-12 text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                   No users found
                 </td>
               </tr>
             ) : (
-              users.map((user) => (
+              users.filter((u) => {
+                if (currentUser?.role === 'auditor') return u.role === 'auditor' || u.role === 'client';
+                if (currentUser?.role !== 'super_admin') return u.role !== 'super_admin';
+                return true;
+              }).map((user) => (
                 <tr key={user.id} className="hover:bg-slate-700/50">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -399,6 +444,9 @@ export default function UsersPage() {
                       </div>
                     </div>
                   </td>
+                  <td className="px-6 py-4 text-slate-400 text-sm">
+                    {user.department || <span className="text-slate-600">—</span>}
+                  </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 text-xs font-medium rounded ${roleBadgeColors[user.role]}`}>
                       {roleLabels[user.role]}
@@ -417,7 +465,8 @@ export default function UsersPage() {
                       const isAuditor = currentUser?.role === 'auditor';
                       const canEdit = !isAuditor &&
                         (currentUser?.role === 'super_admin' || user.role !== 'super_admin');
-                      const canBan = user.id !== currentUser?.id && user.role !== 'super_admin';
+                      const canBan = user.id !== currentUser?.id && user.role !== 'super_admin' &&
+                        (!isAuditor || user.role === 'client');
                       const canResetPw = !isAuditor &&
                         (currentUser?.role === 'super_admin' || user.role !== 'super_admin');
                       const canDelete = !isAuditor &&
@@ -557,7 +606,10 @@ export default function UsersPage() {
                 <label className="block text-sm font-medium text-slate-300 mb-1">Role</label>
                 <select
                   value={createForm.role}
-                  onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as 'admin' | 'auditor' | 'client' })}
+                  onChange={(e) => {
+                    const newRole = e.target.value as 'admin' | 'auditor' | 'client';
+                    setCreateForm({ ...createForm, role: newRole, department: (newRole === 'admin' || newRole === 'auditor') ? '' : createForm.department });
+                  }}
                   className="w-full px-4 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   {availableRoles.map((role) => (
@@ -565,6 +617,21 @@ export default function UsersPage() {
                   ))}
                 </select>
               </div>
+              {createForm.role !== 'admin' && createForm.role !== 'auditor' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Department</label>
+                  <select
+                    value={createForm.department}
+                    onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {(formError || error) && (
                 <div className="p-3 bg-red-900/30 border border-red-700 rounded-lg">
@@ -601,25 +668,15 @@ export default function UsersPage() {
           <div className="bg-slate-800 rounded-xl shadow-xl w-full max-w-md p-6 border border-slate-700">
             <h2 className="text-xl font-semibold text-slate-100 mb-4">Edit User</h2>
             <form onSubmit={handleEdit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Username</label>
-                  <input
-                    type="text"
-                    value={showEditModal.username}
-                    disabled
-                    className="w-full px-4 py-2 border border-slate-600 rounded-lg bg-slate-900 text-slate-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Role</label>
-                  <div className="flex items-center h-[42px]">
-                    <span className={`px-3 py-1.5 text-sm font-medium rounded ${roleBadgeColors[showEditModal.role]}`}>
-                      {roleLabels[showEditModal.role]}
-                    </span>
-                    <span className="ml-2 text-xs text-slate-500">(Cannot be changed)</span>
-                  </div>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Username</label>
+                <input
+                  type="text"
+                  value={editForm.username}
+                  onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                  required
+                  className="w-full px-4 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1">Display Name</label>
@@ -632,14 +689,17 @@ export default function UsersPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Email (optional)</label>
-                <input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-slate-500"
-                  placeholder="user@example.com"
-                />
+                <label className="block text-sm font-medium text-slate-300 mb-1">Role</label>
+                <select
+                  value={editForm.role}
+                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                  disabled={showEditModal.id === currentUser?.id && currentUser?.role === 'super_admin'}
+                  className={`w-full px-4 py-2 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${showEditModal.id === currentUser?.id && currentUser?.role === 'super_admin' ? 'bg-slate-900 text-slate-500 cursor-not-allowed' : 'bg-slate-700 text-slate-100'}`}
+                >
+                  {availableEditRoles.map((role) => (
+                    <option key={role} value={role}>{roleLabels[role]}</option>
+                  ))}
+                </select>
               </div>
 
               {error && (

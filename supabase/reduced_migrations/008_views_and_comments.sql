@@ -6,9 +6,9 @@
 CREATE OR REPLACE VIEW public.active_sessions AS
 SELECT
   s.*,
-  COALESCE(srv.name, s.server_name) as server_name,
-  COALESCE(srv.host, s.server_host) as server_host,
-  COALESCE(srv.protocol, s.server_protocol) as server_protocol
+  COALESCE(srv.name, s.server_name) as resolved_server_name,
+  COALESCE(srv.host, s.server_host) as resolved_server_host,
+  COALESCE(srv.protocol, s.server_protocol) as resolved_server_protocol
 FROM public.sessions s
 LEFT JOIN public.servers srv ON s.server_id = srv.id
 WHERE s.status = 'active'
@@ -52,6 +52,7 @@ SELECT
   u.display_name,
   u.email,
   u.role,
+  u.department,
   u.enabled,
   u.avatar_color,
   u.created_at,

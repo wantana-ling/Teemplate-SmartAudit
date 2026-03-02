@@ -79,10 +79,22 @@ CREATE INDEX idx_user_bans_expires ON user_bans(expires_at)
 -- Access Control Functions
 -- ============================================================================
 
--- Check if user has direct or group-based server access (from 008)
+-- Check if user has direct, group-based, or department-based server access (from 008 + 018)
 CREATE OR REPLACE FUNCTION user_has_server_access(p_user_id UUID, p_server_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
+  -- Check department-based access (server.department is TEXT[])
+  IF EXISTS (
+    SELECT 1 FROM users u
+    JOIN servers s ON s.id = p_server_id
+    WHERE u.id = p_user_id
+      AND u.department IS NOT NULL
+      AND u.department = ANY(s.department)
+  ) THEN
+    RETURN true;
+  END IF;
+
+  -- Check direct user access
   IF EXISTS (
     SELECT 1 FROM server_access
     WHERE server_id = p_server_id AND user_id = p_user_id
@@ -90,6 +102,7 @@ BEGIN
     RETURN true;
   END IF;
 
+  -- Check group access
   IF EXISTS (
     SELECT 1 FROM server_access sa
     JOIN user_groups ug ON ug.group_id = sa.group_id

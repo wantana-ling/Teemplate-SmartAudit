@@ -7,6 +7,7 @@ export interface User {
   display_name: string;
   email: string | null;
   role: 'super_admin' | 'admin' | 'auditor' | 'client';
+  department: string | null;
   enabled: boolean;
   avatar_color: string;
   created_at: string;
@@ -23,10 +24,13 @@ interface UserState {
     password: string;
     displayName: string;
     role: 'admin' | 'auditor' | 'client';
+    department?: string;
   }) => Promise<boolean>;
   updateUser: (id: string, data: Partial<{
+    username: string;
     displayName: string;
     email: string;
+    role: string;
     enabled: boolean;
     password: string;
   }>) => Promise<boolean>;

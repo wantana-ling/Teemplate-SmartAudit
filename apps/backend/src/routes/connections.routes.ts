@@ -43,7 +43,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     // Only return enabled servers to clients
     const { data: servers, error: serverError } = await supabase
       .from('servers')
-      .select('id, name, host, port, protocol, description, tags, created_at')
+      .select('id, name, host, port, protocol, description, tags, department, created_at')
       .in('id', accessibleServerIds)
       .eq('enabled', true);
 
@@ -127,6 +127,30 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
         if (server && !groupedByGroup[access.group_id].servers.find((s: any) => s.id === server.id)) {
           groupedByGroup[access.group_id].servers.push(server);
         }
+      }
+    }
+
+    // Add department-matched servers under a special "department" key
+    const { data: currentUser } = await supabase
+      .from('users')
+      .select('department')
+      .eq('id', userId)
+      .single();
+
+    if (currentUser?.department) {
+      const deptServers = annotatedServers.filter((s: any) =>
+        Array.isArray(s.department) && s.department.includes(currentUser.department)
+      );
+      if (deptServers.length > 0) {
+        groupedByGroup['department'] = {
+          group: {
+            id: 'department',
+            name: `Department: ${currentUser.department}`,
+            color: '#8B5CF6',
+            description: `Servers assigned to ${currentUser.department} department`,
+          },
+          servers: deptServers,
+        };
       }
     }
 

@@ -488,7 +488,7 @@ router.get('/servers', async (req: Request, res: Response) => {
  */
 router.post('/servers', async (req: Request, res: Response) => {
   try {
-    const { name, host, port, protocol, username, password, description } = req.body;
+    const { name, host, port, protocol, username, password, description, department } = req.body;
     const currentUser = (req as any).user;
 
     if (!name || !host || !port || !protocol) {
@@ -498,18 +498,21 @@ router.post('/servers', async (req: Request, res: Response) => {
       });
     }
 
+    const insertData: any = {
+      name,
+      host,
+      port,
+      protocol,
+      username,
+      password, // Should be encrypted in production
+      description,
+      enabled: true,
+    };
+    if (department !== undefined) insertData.department = department;
+
     const { data: server, error } = await supabase
       .from('servers')
-      .insert({
-        name,
-        host,
-        port,
-        protocol,
-        username,
-        password, // Should be encrypted in production
-        description,
-        enabled: true,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -542,7 +545,7 @@ router.post('/servers', async (req: Request, res: Response) => {
 router.put('/servers/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, host, port, protocol, username, password, description, enabled } = req.body;
+    const { name, host, port, protocol, username, password, description, enabled, department } = req.body;
 
     const updates: any = {};
     if (name !== undefined) updates.name = name;
@@ -553,6 +556,7 @@ router.put('/servers/:id', async (req: Request, res: Response) => {
     if (password) updates.password = password; // Only update if provided
     if (description !== undefined) updates.description = description;
     if (enabled !== undefined) updates.enabled = enabled;
+    if (department !== undefined) updates.department = department;
 
     const { data: server, error } = await supabase
       .from('servers')
@@ -566,6 +570,37 @@ router.put('/servers/:id', async (req: Request, res: Response) => {
         success: false,
         error: error.message,
       });
+    }
+
+    // Sync department with group access (server_access table)
+    console.log('[Sync] department value:', department, 'isArray:', Array.isArray(department));
+    if (department !== undefined && Array.isArray(department)) {
+      const currentUser = (req as any).user;
+      const { data: groups, error: groupsErr } = await supabase.from('groups').select('id, name');
+      console.log('[Sync] Groups found:', groups?.length, 'error:', groupsErr?.message);
+
+      if (groups && groups.length > 0) {
+        // 1. Remove ALL existing group-based access for this server
+        const { error: delErr, count: delCount } = await supabase.from('server_access')
+          .delete()
+          .eq('server_id', id)
+          .not('group_id', 'is', null);
+        console.log('[Sync] Deleted group access, error:', delErr?.message, 'count:', delCount);
+
+        // 2. Build inserts for all matching departments
+        for (const deptName of department) {
+          const group = groups.find((g: any) => g.name === deptName);
+          console.log(`[Sync] Dept "${deptName}" -> group:`, group?.id, group?.name);
+          if (group) {
+            const { error: insErr } = await supabase.from('server_access').insert({
+              server_id: id,
+              group_id: group.id,
+              granted_by: currentUser?.userId || null,
+            });
+            console.log(`[Sync] Insert for "${deptName}":`, insErr ? `ERROR: ${insErr.message}` : 'OK');
+          }
+        }
+      }
     }
 
     // Audit log: server updated (with specific action for enable/disable)

@@ -117,6 +117,7 @@ SELECT
   u.display_name,
   u.email,
   u.role,
+  u.department,
   u.enabled,
   u.avatar_color,
   u.created_at,

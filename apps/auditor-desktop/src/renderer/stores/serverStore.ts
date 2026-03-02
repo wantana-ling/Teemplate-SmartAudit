@@ -9,6 +9,7 @@ export interface Server {
   protocol: 'ssh' | 'rdp' | 'vnc';
   username?: string;
   description?: string;
+  department?: string[];
   enabled: boolean;
   created_at: string;
   active_sessions?: number;

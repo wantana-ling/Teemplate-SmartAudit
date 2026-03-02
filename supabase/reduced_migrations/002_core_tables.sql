@@ -11,6 +11,7 @@ CREATE TABLE users (
   email TEXT UNIQUE,
   email_verified BOOLEAN DEFAULT false,
   role TEXT NOT NULL CHECK (role IN ('super_admin', 'admin', 'security', 'auditor', 'client')),
+  department TEXT,
   enabled BOOLEAN DEFAULT true,
   avatar_color TEXT DEFAULT '#3B82F6',
   last_login_at TIMESTAMPTZ,
@@ -21,6 +22,7 @@ CREATE TABLE users (
 
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_department ON users(department);
 CREATE INDEX idx_users_enabled ON users(enabled);
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -38,6 +40,7 @@ CREATE TABLE servers (
   password TEXT,
   description TEXT,
   tags TEXT[],
+  department TEXT[],
   enabled BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -45,6 +48,7 @@ CREATE TABLE servers (
 
 CREATE INDEX servers_user_id_idx ON servers(user_id);
 CREATE INDEX servers_created_at_idx ON servers(created_at DESC);
+CREATE INDEX idx_servers_department ON servers USING GIN(department);
 
 ALTER TABLE servers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role full access" ON servers FOR ALL USING (true);

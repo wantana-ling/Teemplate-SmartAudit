@@ -155,9 +155,28 @@ class ServerAccessService {
   }
 
   /**
-   * Check if user has access to server (directly or via group)
+   * Check if user has access to server (directly, via group, or via department match)
    */
   async userHasAccess(userId: string, serverId: string): Promise<boolean> {
+    // Check department-based access first
+    const { data: user } = await supabase
+      .from('users')
+      .select('department')
+      .eq('id', userId)
+      .single();
+
+    if (user?.department) {
+      const { data: server } = await supabase
+        .from('servers')
+        .select('department')
+        .eq('id', serverId)
+        .single();
+
+      if (server?.department && Array.isArray(server.department) && server.department.includes(user.department)) {
+        return true;
+      }
+    }
+
     // Check direct user access
     const { count: directCount } = await supabase
       .from('server_access')
@@ -191,20 +210,36 @@ class ServerAccessService {
   }
 
   /**
-   * Get all servers a user can access
+   * Get all servers a user can access (direct, group, or department match)
    */
   async getUserAccessibleServers(userId: string): Promise<string[]> {
-    // Get directly accessible servers
+    const serverIds = new Set<string>();
+
+    // 1. Department-based access: servers whose department matches user's department
+    const { data: user } = await supabase
+      .from('users')
+      .select('department')
+      .eq('id', userId)
+      .single();
+
+    if (user?.department) {
+      const { data: deptServers } = await supabase
+        .from('servers')
+        .select('id')
+        .contains('department', [user.department]);
+
+      (deptServers || []).forEach((s: any) => serverIds.add(s.id));
+    }
+
+    // 2. Direct user access via server_access table
     const { data: directAccess } = await supabase
       .from('server_access')
       .select('server_id')
       .eq('user_id', userId);
 
-    const serverIds = new Set<string>(
-      (directAccess || []).map((a: any) => a.server_id)
-    );
+    (directAccess || []).forEach((a: any) => serverIds.add(a.server_id));
 
-    // Get group-accessible servers
+    // 3. Group-based access via user_groups + server_access
     const { data: userGroups } = await supabase
       .from('user_groups')
       .select('group_id')

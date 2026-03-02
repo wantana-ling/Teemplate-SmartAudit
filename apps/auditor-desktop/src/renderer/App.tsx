@@ -57,7 +57,7 @@ function App() {
 
   // Logged in - show main app
   // Apply role-based access to routes
-  const canManageUsers = ['super_admin', 'admin'].includes(user.role);
+  const canManageUsers = ['super_admin', 'admin', 'auditor'].includes(user.role);
   const isSuperAdmin = user.role === 'super_admin';
 
   // Playback modal rendered via portal to document.body

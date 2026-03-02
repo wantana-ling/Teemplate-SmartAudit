@@ -28,12 +28,10 @@ export default function SettingsPage() {
   const [settingsSaving, setSavingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Password state
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  // IP Server state
+  const [apiServerUrl, setApiServerUrl] = useState(api.getBaseUrl().replace(/^https?:\/\//, ''));
+  const [apiTesting, setApiTesting] = useState(false);
+  const [apiMessage, setApiMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Audit log state
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
@@ -44,7 +42,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'general', label: 'General' },
-    { id: 'security', label: 'Security' },
+    { id: 'api', label: 'IP Server' },
     { id: 'audit', label: 'Audit Log' },
   ];
 
@@ -109,42 +107,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleChangePassword = async () => {
-    setPasswordMessage(null);
-
-    // Validation
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordMessage({ type: 'error', text: 'All fields are required' });
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setPasswordMessage({ type: 'error', text: 'New password must be at least 6 characters' });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordMessage({ type: 'error', text: 'New passwords do not match' });
-      return;
-    }
-
-    setPasswordLoading(true);
-    try {
-      const response = await api.changePassword(currentPassword, newPassword);
-      if (response.success) {
-        setPasswordMessage({ type: 'success', text: 'Password changed successfully' });
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      } else {
-        setPasswordMessage({ type: 'error', text: response.error || 'Failed to change password' });
-      }
-    } catch (error: any) {
-      setPasswordMessage({ type: 'error', text: error.message || 'Failed to change password' });
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
 
   const loadAuditLogs = async (offset = 0) => {
     setAuditLoading(true);
@@ -342,67 +304,106 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Security Tab */}
-          {activeTab === 'security' && (
+          {/* IP Server Tab */}
+          {activeTab === 'api' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium text-slate-100 mb-4">Change Password</h3>
+              <div>
+                <h3 className="text-lg font-medium text-slate-100 mb-4">IP Server Configuration</h3>
+                <p className="text-sm text-slate-400 mb-6">
+                  Configure the backend IP server that this application connects to.
+                </p>
 
-              <div className="space-y-4 max-w-md">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Current Password
-                  </label>
-                  <input
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Enter current password"
-                    className="w-full px-4 py-2 border border-slate-600 rounded-lg bg-slate-700 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
+                <div className="space-y-4 max-w-lg">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      IP Server
+                    </label>
+                    <input
+                      type="text"
+                      value={apiServerUrl}
+                      onChange={(e) => setApiServerUrl(e.target.value)}
+                      placeholder="192.168.1.100:8080"
+                      className="w-full px-4 py-2 border border-slate-600 rounded-lg bg-slate-700 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-sm"
+                    />
+                    <p className="mt-1 text-xs text-slate-500">
+                      Default: {api.getDefaultUrl().replace(/^https?:\/\//, '')}
+                    </p>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password (min 6 characters)"
-                    className="w-full px-4 py-2 border border-slate-600 rounded-lg bg-slate-700 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      onClick={async () => {
+                        setApiTesting(true);
+                        setApiMessage(null);
+                        try {
+                          const ip = apiServerUrl.replace(/\/+$/, '');
+                          const url = ip.startsWith('http') ? ip : `http://${ip}`;
+                          const res = await fetch(`${url}/api/health`, { method: 'GET' }).catch(() => null);
+                          if (res && res.ok) {
+                            setApiMessage({ type: 'success', text: 'Connection successful!' });
+                          } else {
+                            setApiMessage({ type: 'error', text: 'Cannot connect to server' });
+                          }
+                        } catch {
+                          setApiMessage({ type: 'error', text: 'Cannot connect to server' });
+                        } finally {
+                          setApiTesting(false);
+                        }
+                      }}
+                      disabled={apiTesting || !apiServerUrl.trim()}
+                      className="px-4 py-2 bg-slate-600 text-slate-200 rounded-lg hover:bg-slate-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                    >
+                      {apiTesting && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      )}
+                      Test Connection
+                    </button>
+                    <button
+                      onClick={() => {
+                        const ip = apiServerUrl.replace(/\/+$/, '');
+                        const url = ip.startsWith('http') ? ip : `http://${ip}`;
+                        api.setBaseUrl(url);
+                        setApiMessage({ type: 'success', text: 'IP Server saved. Reload to apply.' });
+                        setTimeout(() => setApiMessage(null), 5000);
+                      }}
+                      disabled={!apiServerUrl.trim()}
+                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setApiServerUrl(api.getDefaultUrl().replace(/^https?:\/\//, ''));
+                        api.setBaseUrl(api.getDefaultUrl());
+                        setApiMessage({ type: 'success', text: 'Reset to default. Reload to apply.' });
+                        setTimeout(() => setApiMessage(null), 5000);
+                      }}
+                      className="px-4 py-2 text-slate-400 hover:text-slate-200 text-sm"
+                    >
+                      Reset to Default
+                    </button>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                    className="w-full px-4 py-2 border border-slate-600 rounded-lg bg-slate-700 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-
-                <div className="pt-2 flex items-center gap-4">
-                  <button
-                    onClick={handleChangePassword}
-                    disabled={passwordLoading}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {passwordLoading && (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    )}
-                    Update Password
-                  </button>
-                  {passwordMessage && (
-                    <p className={`text-sm ${passwordMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
-                      {passwordMessage.text}
+                  {apiMessage && (
+                    <p className={`text-sm ${apiMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                      {apiMessage.text}
                     </p>
                   )}
+                </div>
+              </div>
+
+              {/* Current connection info */}
+              <div className="mt-6 p-4 bg-slate-700/30 rounded-lg border border-slate-700/50">
+                <h4 className="text-sm font-medium text-slate-300 mb-2">Current Connection</h4>
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-400">
+                    <span className="text-slate-500">Active IP:</span>{' '}
+                    <span className="font-mono text-slate-300">{api.getBaseUrl().replace(/^https?:\/\//, '')}</span>
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    <span className="text-slate-500">Default IP:</span>{' '}
+                    <span className="font-mono text-slate-300">{api.getDefaultUrl().replace(/^https?:\/\//, '')}</span>
+                  </p>
                 </div>
               </div>
             </div>
