@@ -9,6 +9,7 @@ on:
 jobs:
   build-auditor:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       matrix:
         os: [macos-latest, windows-latest]
@@ -53,6 +54,7 @@ jobs:
 
   build-client:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       matrix:
         os: [macos-latest, windows-latest]
