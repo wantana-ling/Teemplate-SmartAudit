@@ -16,6 +16,7 @@ services:
       - ./docker/recordings:/recordings
     environment:
       - GUACD_LOG_LEVEL=info
+      - GUAC_RECORDING_PATH=/recordings
     networks:
       - smartaiaudit
 

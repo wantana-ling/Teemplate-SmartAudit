@@ -59,14 +59,6 @@
       "dist-electron/**/*",
       "dist/**/*"
     ],
-    "mac": {
-      "icon": "build/icon.icns",
-      "category": "public.app-category.productivity",
-      "target": [
-        "dmg",
-        "zip"
-      ]
-    },
     "win": {
       "icon": "build/icon.ico",
       "target": [
@@ -74,8 +66,22 @@
         "portable"
       ]
     },
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        "zip"
+      ]
+    },
     "linux": {
-      "icon": "build/icon.png",
       "target": [
         "AppImage"
       ],

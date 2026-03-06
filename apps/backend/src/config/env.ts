@@ -26,7 +26,7 @@ const envSchema = z.object({
   // Guacamole
   GUACD_HOST: z.string().default('localhost'),
   GUACD_PORT: z.string().default('4822').transform(Number),
-  GUAC_RECORDING_PATH: z.string().default('/tmp/recordings'),
+  GUAC_RECORDING_PATH: z.string().default('/recordings'),
 
   // Security (required in production)
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),

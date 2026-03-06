@@ -1,0 +1,96 @@
+name: Build Desktop Apps
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-auditor:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+        
+    - name: Install dependencies
+      run: |
+        cd apps/auditor-desktop
+        pnpm install
+        
+    - name: Build application
+      run: |
+        cd apps/auditor-desktop
+        pnpm run build
+        
+    - name: Build installer
+      run: |
+        cd apps/auditor-desktop
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then
+          pnpm run package:mac
+        else
+          pnpm run package:win
+        fi
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: auditor-${{ matrix.os }}
+        path: apps/auditor-desktop/release/
+
+  build-client:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+        
+    - name: Install dependencies
+      run: |
+        cd apps/client-desktop
+        pnpm install
+        
+    - name: Build application
+      run: |
+        cd apps/client-desktop
+        pnpm run build
+        
+    - name: Build installer
+      run: |
+        cd apps/client-desktop
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then
+          pnpm run package:mac
+        else
+          pnpm run package:win
+        fi
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: client-${{ matrix.os }}
+        path: apps/client-desktop/release/
