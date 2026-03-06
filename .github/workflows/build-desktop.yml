@@ -39,7 +39,7 @@ jobs:
     - name: Build installer
       run: |
         cd apps/auditor-desktop
-        if [ "${{ matrix.os }}" = "macos-latest" ]; then
+        if [ "$RUNNER_OS" = "macOS" ]; then
           pnpm run package:mac
         else
           pnpm run package:win
@@ -83,7 +83,7 @@ jobs:
     - name: Build installer
       run: |
         cd apps/client-desktop
-        if [ "${{ matrix.os }}" = "macos-latest" ]; then
+        if [ "$RUNNER_OS" = "macOS" ]; then
           pnpm run package:mac
         else
           pnpm run package:win
