@@ -39,11 +39,11 @@ jobs:
     - name: Build installer
       run: |
         cd apps/auditor-desktop
-        if [ "$RUNNER_OS" = "macOS" ]; then
+        if ("$RUNNER_OS" -eq "macOS") {
           pnpm run package:mac
-        else
+        } else {
           pnpm run package:win
-        fi
+        }
         
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
@@ -83,11 +83,11 @@ jobs:
     - name: Build installer
       run: |
         cd apps/client-desktop
-        if [ "$RUNNER_OS" = "macOS" ]; then
+        if ("$RUNNER_OS" -eq "macOS") {
           pnpm run package:mac
-        else
+        } else {
           pnpm run package:win
-        fi
+        }
         
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
