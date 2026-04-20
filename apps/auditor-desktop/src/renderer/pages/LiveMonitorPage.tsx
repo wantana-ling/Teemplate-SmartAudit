@@ -109,7 +109,7 @@ export default function LiveMonitorPage() {
 
   useEffect(() => {
     fetchActiveSessions();
-    const interval = setInterval(fetchActiveSessions, 5000);
+    const interval = setInterval(fetchActiveSessions, 1000);
     return () => clearInterval(interval);
   }, [fetchActiveSessions]);
 
@@ -202,7 +202,7 @@ export default function LiveMonitorPage() {
   const formatDuration = (startedAt: string) => {
     const start = new Date(startedAt);
     const now = new Date();
-    const diff = Math.floor((now.getTime() - start.getTime()) / 1000);
+    const diff = Math.floor((now.getTime() - start.getTime()) / 1000) - 7; // Subtract 7 seconds
 
     const hours = Math.floor(diff / 3600);
     const minutes = Math.floor((diff % 3600) / 60);
@@ -256,7 +256,7 @@ export default function LiveMonitorPage() {
             </span>
           </div>
           <span className="text-slate-600">|</span>
-          <span className="text-sm text-slate-500">Auto-refresh 5s</span>
+          <span className="text-sm text-slate-500">Auto-refresh 1s</span>
         </div>
 
         {/* Collapsible Alert Badge */}

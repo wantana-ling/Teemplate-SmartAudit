@@ -338,7 +338,7 @@ export default function SettingsPage() {
                         try {
                           const ip = apiServerUrl.replace(/\/+$/, '');
                           const url = ip.startsWith('http') ? ip : `http://${ip}`;
-                          const res = await fetch(`${url}/api/health`, { method: 'GET' }).catch(() => null);
+                          const res = await fetch(`${url}/api/sessions?limit=1`, { method: 'GET' }).catch(() => null);
                           if (res && res.ok) {
                             setApiMessage({ type: 'success', text: 'Connection successful!' });
                           } else {

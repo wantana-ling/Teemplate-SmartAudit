@@ -10,47 +10,50 @@ services:
       - ./recordings:/recordings
     environment:
       - GUACD_LOG_LEVEL=info
+      - GUACD_RECORDING_PATH=/recordings
+      - GUACD_RECORDING_MAX_TIME=3600  # 1 hour max recording time
+      - GUACD_RECORDING_IGNORE_CERT_ERRORS=true
     networks:
       - smartaiaudit
 
+  # Test Servers (commented out for faster startup)
   # SSH Test Server
-  ssh-server:
-    build:
-      context: ./test-servers/ssh
-      dockerfile: Dockerfile
-    container_name: smartaiaudit-ssh-server
-    restart: unless-stopped
-    ports:
-      - "2222:22"
-    networks:
-      - smartaiaudit
+  # ssh-server:
+  #   build:
+  #     context: ./test-servers/ssh
+  #     dockerfile: Dockerfile
+  #   container_name: smartaiaudit-ssh-server
+  #   restart: unless-stopped
+  #   ports:
+  #     - "2222:22"
+  #   networks:
+  #     - smartaiaudit
 
-  # VNC Test Server (Linux GUI)
-  vnc-server:
-    build:
-      context: ./test-servers/linux-gui
-      dockerfile: Dockerfile
-    container_name: smartaiaudit-vnc-server
-    restart: unless-stopped
-    ports:
-      - "5901:5900"
-    environment:
-      - VNC_PASSWORD=testpass
-      - VNC_RESOLUTION=1280x720
-    networks:
-      - smartaiaudit
+  # VNC Test Server
+  # vnc-server:
+  #   build:
+  #     context: ./test-servers/vnc
+  #     dockerfile: Dockerfile
+  #   container_name: smartaiaudit-vnc-server
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5901:5901"
+  #   environment:
+  #     - VNC_PASSWORD=password
+  #   networks:
+  #     - smartaiaudit
 
-  # RDP Test Server (Linux with xRDP)
-  rdp-server:
-    build:
-      context: ./test-servers/linux-rdp
-      dockerfile: Dockerfile
-    container_name: smartaiaudit-rdp-server
-    restart: unless-stopped
-    ports:
-      - "3389:3389"
-    networks:
-      - smartaiaudit
+  # RDP Test Server
+  # rdp-server:
+  #   build:
+  #     context: ./test-servers/rdp
+  #     dockerfile: Dockerfile
+  #   container_name: smartaiaudit-rdp-server
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3389:3389"
+  #   networks:
+  #     - smartaiaudit
 
 networks:
   smartaiaudit:

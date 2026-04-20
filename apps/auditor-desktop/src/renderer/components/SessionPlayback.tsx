@@ -5,6 +5,7 @@ interface SessionPlaybackProps {
   recordingUrl: string;
   sessionName?: string;
   sessionDate?: string;
+  sessionDuration?: number;  // Add session duration from backend
   onClose?: () => void;
   onError?: (error: string) => void;
 }
@@ -12,7 +13,7 @@ interface SessionPlaybackProps {
 const PLAYBACK_SPEEDS = [0.5, 1, 1.5, 2];
 const CONTROLS_HIDE_DELAY = 3000; // Hide controls after 3 seconds of inactivity
 
-export default function SessionPlayback({ recordingUrl, sessionName, sessionDate, onClose, onError }: SessionPlaybackProps) {
+export default function SessionPlayback({ recordingUrl, sessionName, sessionDate, sessionDuration, onClose, onError }: SessionPlaybackProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const displayContainerRef = useRef<HTMLDivElement>(null);
   const guacDisplayRef = useRef<HTMLDivElement | null>(null);
@@ -226,8 +227,10 @@ export default function SessionPlayback({ recordingUrl, sessionName, sessionDate
 
         recording.onprogress = (dur: number) => {
           if (mountedRef.current) {
-            setDuration(dur);
-            durationRef.current = dur;
+            // Use session duration from backend if available, otherwise use recording duration
+            const finalDuration = sessionDuration || dur;
+            setDuration(finalDuration);
+            durationRef.current = finalDuration;
           }
         };
 

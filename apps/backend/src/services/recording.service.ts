@@ -109,9 +109,9 @@ class RecordingService {
    */
   async uploadGuacRecording(sessionId: string): Promise<string | null> {
     try {
-      // Brief delay: guacd may still be flushing the last frames when the
+      // Optimal delay: guacd may still be flushing the last frames when the
       // connection-close handler fires.  Give it time to finish writing.
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 10000)); // 10 seconds delay
 
       // Use HOST_RECORDING_PATH - this is where the docker volume mounts recordings on the host
       // guacd may create file with or without .guac extension

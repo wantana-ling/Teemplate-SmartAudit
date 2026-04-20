@@ -45,6 +45,11 @@ export function getGuacamoleLiteConfig() {
     guacd: {
       host: env.GUACD_HOST,
       port: env.GUACD_PORT,
+      // Connection settings
+      'connection-timeout': '120000',  // 2 minutes
+      'read-timeout': '120000',       // 2 minutes
+      'idle-timeout': '0',           // No idle timeout
+      'max-connection-time': '7200',  // 2 hours max connection
     },
     client: {
       crypt: {
@@ -69,6 +74,14 @@ export function createConnectionSettings(
     'recording-path': env.GUAC_RECORDING_PATH,
     'recording-name': `session-${sessionId}`,
     'create-recording-path': 'true',
+    // Recording settings
+    'recording-exclude-touch': 'false',
+    'recording-exclude-clipboard': 'false',
+    'recording-include-keys': 'true',
+    'recording-include-mouse': 'true',
+    'recording-buffer-size': '8192',  // 8KB buffer - optimal size
+    'recording-create-path': 'true',
+    'recording-include-timestamps': 'true',  // Include absolute timestamps
   };
 
   // Add credentials if provided

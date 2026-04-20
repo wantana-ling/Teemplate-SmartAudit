@@ -17,6 +17,14 @@ import Layout from './components/Layout';
 import SessionPlayback from './components/SessionPlayback';
 import { format } from 'date-fns';
 
+// Calculate session duration in milliseconds
+const calculateSessionDuration = (session: any): number => {
+  if (!session.started_at) return 0;
+  const startTime = new Date(session.started_at).getTime();
+  const endTime = session.ended_at ? new Date(session.ended_at).getTime() : Date.now();
+  return endTime - startTime;
+};
+
 function App() {
   const { user, loading, setupRequired, initialize } = useAuthStore();
   const { isOpen, session: playbackSession, recordingUrl, closePlayback } = usePlaybackStore();
@@ -75,6 +83,7 @@ function App() {
           recordingUrl={recordingUrl}
           sessionName={playbackSession.servers?.name}
           sessionDate={format(new Date(playbackSession.started_at), 'MMM d, yyyy HH:mm')}
+          sessionDuration={calculateSessionDuration(playbackSession)}
           onClose={closePlayback}
           onError={(err) => {
             console.error('Playback error:', err);
